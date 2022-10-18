@@ -1,0 +1,61 @@
+stages:
+  - stage: validate
+    jobs:
+      - job: validate
+        continueOnError: false
+        steps:
+        - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
+          displayName: "install"
+          inputs:
+            terraformVersion: '1.2.2'
+        - task: TerraformTaskV3@3
+          displayName: "init"
+          inputs:
+            provider: 'azurerm'
+            command: 'init'
+            backendServiceArm: 'azure-spn'
+            backendAzureRmResourceGroupName: 'terraform-rg'
+            backendAzureRmStorageAccountName: 'terraformstorage10973'
+            backendAzureRmContainerName: 'sktfcontainer'
+            backendAzureRmKey: 'terraform.tfstate'
+        - task: TerraformTaskV3@3
+          displayName: "validate"
+          inputs:
+            provider: 'azurerm'
+            command: 'validate'
+  - stage: deploy
+    jobs:
+      - deployment: deploy_terraform
+        continueOnError: false
+        environment: 'dev'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
+                  displayName: "install"
+                  inputs:
+                    terraformVersion: '1.2.2'
+                - task: TerraformTaskV3@3
+                  displayName: "init"
+                  inputs:
+                    provider: 'azurerm'
+                    command: 'init'
+                    backendServiceArm: 'azure-spn-2'
+                    backendAzureRmResourceGroupName: 'terraform-rg'
+                    backendAzureRmStorageAccountName: 'terraformstorage10973'
+                    backendAzureRmContainerName: 'sktfcontainer'
+                    backendAzureRmKey: 'terraform.tfstate'
+                - task: TerraformTaskV3@3
+                  displayName: "plan"
+                  inputs:
+                    provider: 'azurerm'
+                    command: 'plan'
+                    environmentServiceNameAzureRM: 'azure-spn-2'
+                - task: TerraformTaskV3@3
+                  displayName: "apply"
+                  inputs:
+                    provider: 'azurerm'
+                    command: 'apply'
+                    environmentServiceNameAzureRM: 'azure-spn-2'
